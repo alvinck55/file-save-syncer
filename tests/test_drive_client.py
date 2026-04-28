@@ -72,3 +72,16 @@ def test_download_file(tmp_path):
                 client.download_file("file_id", dest)
 
     svc.files().get_media.assert_called_once_with(fileId="file_id")
+
+
+def test_invite_user():
+    client, svc = _make_client()
+    svc.permissions().create().execute.return_value = {"id": "perm123"}
+
+    client.invite_user("folder_id", "friend@gmail.com")
+
+    call_kwargs = svc.permissions().create.call_args.kwargs
+    assert call_kwargs["fileId"] == "folder_id"
+    assert call_kwargs["body"] == {"type": "user", "role": "writer", "emailAddress": "friend@gmail.com"}
+    assert call_kwargs["sendNotificationEmail"] is True
+    assert call_kwargs["fields"] == "id"

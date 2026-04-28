@@ -73,3 +73,19 @@ class DriveClient:
             .get(fileId=file_id, fields="id,name,modifiedTime")
             .execute()
         )
+
+    def get_folder_metadata(self, folder_id: str) -> dict:
+        return (
+            self._svc.files()
+            .get(fileId=folder_id, fields="id,name")
+            .execute()
+        )
+
+    def invite_user(self, folder_id: str, email: str) -> None:
+        self._svc.permissions().create(
+            fileId=folder_id,
+            body={"type": "user", "role": "writer", "emailAddress": email},
+            sendNotificationEmail=True,
+            emailMessage="You've been invited to join a Windrose shared world. Run `windrose join` with the folder ID to get started.",
+            fields="id",
+        ).execute()

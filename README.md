@@ -16,7 +16,6 @@ Automatically syncs your Windrose game save to Google Drive before and after eac
 - Python 3.9+
 - Steam running in the background (you must be logged in)
 - A Google account
-- A GCP project with the Google Drive API enabled
 
 ---
 
@@ -38,21 +37,9 @@ pip install -e .
 
 ---
 
-## Google Cloud Setup
-
-Before running `windrose init` you need a `client_secret.json` from Google Cloud.
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com)
-2. Create a new project (or select an existing one)
-3. Go to **APIs & Services → Library**, search for **Google Drive API**, and enable it
-4. Go to **APIs & Services → Credentials**
-5. Click **Create Credentials → OAuth 2.0 Client ID**
-6. Choose **Desktop app**, give it a name, click **Create**
-7. Download the JSON file — this is your `client_secret.json`
-
----
-
 ## First-time setup
+
+### Host (first player — sets up the shared Drive folder)
 
 Run the setup wizard once:
 
@@ -124,10 +111,11 @@ windrose status  # show last sync time and direction
 
 Since this is last-write-wins, coordinate with your group about who is actively playing:
 
-1. **Before you play:** run `windrose launch` — it pulls automatically
-2. **When you're done:** close the game — it pushes automatically
-3. **Handing off mid-session:** right-click tray → **Push save now**, then tell the next player it's ready
-4. **If someone else pushed while you're mid-session:** right-click tray → **Pull save now** (confirm the overwrite)
+1. **Adding a new player:** host runs `windrose invite theirmail@gmail.com`, they run `windrose join <folder-id>`
+2. **Before you play:** run `windrose launch` — it pulls automatically
+3. **When you're done:** close the game — it pushes automatically
+4. **Handing off mid-session:** right-click tray → **Push save now**, then tell the next player it's ready
+5. **If someone else pushed while you're mid-session:** right-click tray → **Pull save now** (confirm the overwrite)
 
 > Only one person should be playing at a time. Two simultaneous sessions will result in one player's progress being overwritten.
 
@@ -152,6 +140,31 @@ file_id = "1abc..."
 
 To change the save path or executable, edit this file directly or re-run `windrose init`.
 
+### Inviting other players
+
+The host invites each player by their Gmail address:
+
+```bash
+windrose invite friend@gmail.com
+```
+
+This grants them access to the shared Drive folder and sends them an email from Google with instructions. The command also prints the folder ID they'll need:
+
+```
+Invited friend@gmail.com — they'll receive an email from Google.
+Tell them to run: windrose join 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
+```
+
+### Everyone else (joining an existing shared world)
+
+Once invited, each player runs the join command with the folder ID the host provided:
+
+```bash
+windrose join 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
+```
+
+You'll be prompted for your game exe path and save path, then asked to sign in with Google. The tool verifies folder access before saving your config.
+
 ---
 
 ## Files stored locally
@@ -161,7 +174,6 @@ All windrose files are in `~/.windrose/`:
 | File | Purpose |
 |---|---|
 | `config.toml` | Your game and Drive configuration |
-| `client_secret.json` | GCP OAuth credentials (from Google Cloud Console) |
 | `token.json` | Your Google auth token (managed automatically) |
 | `state.json` | Last sync time and status |
 
@@ -183,3 +195,19 @@ Delete `~/.windrose/token.json` and re-run `windrose init` to re-authenticate.
 
 **Push failed / Drive unreachable**
 Check your internet connection. Run `windrose push` manually once you're back online.
+
+---
+
+## Developer setup
+
+> This section is only for the person maintaining and distributing the tool — not for players.
+
+The file `src/windrose/data/client_secret.json` is a placeholder. Before distributing the tool you must replace it with real GCP credentials:
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. Create a project, enable the **Google Drive API**
+3. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+4. Choose **Desktop app**, download the JSON
+5. Replace `src/windrose/data/client_secret.json` with the downloaded file
+
+Players who install the tool will use these credentials automatically — they only need to sign in with their own Google account.
