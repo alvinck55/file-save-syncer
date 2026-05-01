@@ -4,7 +4,7 @@ from pathlib import Path
 
 import typer
 
-from windrose.config.manager import ConfigManager, WindroseConfig
+from windrose.config.manager import ConfigManager, WindroseConfig, WorldConfig
 from windrose.drive.auth import build_service, run_oauth_flow
 from windrose.drive.client import DriveClient
 
@@ -19,6 +19,8 @@ def join(folder_id: str = typer.Argument(..., help="Google Drive folder ID share
     if not Path(exe_path).is_file():
         typer.echo(f"Error: file not found: {exe_path}", err=True)
         raise typer.Exit(1)
+
+    world_name = typer.prompt("Name for your first world", default="main")
 
     save_path = typer.prompt("Full path to save file or save folder")
     save_p = Path(save_path)
@@ -48,11 +50,11 @@ def join(folder_id: str = typer.Argument(..., help="Google Drive folder ID share
     cfg = WindroseConfig(
         game_name=game_name,
         game_exe_path=exe_path,
-        save_path=save_path,
-        save_type=save_type,
         drive_folder_id=folder_id,
         drive_folder_name=folder_name,
+        worlds=[WorldConfig(name=world_name, save_path=save_path, save_type=save_type)],
     )
     ConfigManager().save(cfg)
 
     typer.echo(f"\nJoined '{folder_name}'. Run `windrose launch` to start playing.")
+    typer.echo("Add more worlds with `windrose add-world <name> <path>`.")

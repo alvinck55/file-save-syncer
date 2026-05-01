@@ -20,24 +20,28 @@ def _make_image() -> Image.Image:
     return img
 
 
-def _last_sync_label() -> str:
+def _last_sync_label(world_name: str) -> str:
     if not STATE_FILE.exists():
         return "Last sync: never"
     try:
         data = json.loads(STATE_FILE.read_text())
-        ts = datetime.fromisoformat(data["last_sync"])
+        # Support both old flat format and new per-world format
+        entry = data.get(world_name) or (data if "last_sync" in data else None)
+        if not entry:
+            return "Last sync: never"
+        ts = datetime.fromisoformat(entry["last_sync"])
         delta = datetime.now(timezone.utc) - ts
         minutes = int(delta.total_seconds() // 60)
-        direction = data.get("direction", "")
-        label = f"Last sync: {minutes}m ago ({direction})" if minutes > 0 else "Last sync: just now"
-        return label
+        direction = entry.get("direction", "")
+        return f"Last sync: {minutes}m ago ({direction})" if minutes > 0 else "Last sync: just now"
     except Exception:
         return "Last sync: unknown"
 
 
 class TrayIcon:
-    def __init__(self, engine: SyncEngine) -> None:
+    def __init__(self, engine: SyncEngine, world_name: str) -> None:
         self._engine = engine
+        self._world_name = world_name
         self._icon: pystray.Icon | None = None
         self._timer: threading.Timer | None = None
 
@@ -59,7 +63,7 @@ class TrayIcon:
 
     def _make_menu(self) -> pystray.Menu:
         return pystray.Menu(
-            pystray.MenuItem(_last_sync_label(), None, enabled=False),
+            pystray.MenuItem(_last_sync_label(self._world_name), None, enabled=False),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Push save now", self._on_push),
             pystray.MenuItem("Pull save now", self._on_pull),

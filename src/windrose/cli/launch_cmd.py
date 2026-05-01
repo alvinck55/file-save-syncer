@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import threading
+from typing import Optional
 
 import typer
 
+from windrose.cli._world_utils import resolve_world
 from windrose.config.manager import ConfigManager
 from windrose.drive.auth import build_service
 from windrose.drive.client import DriveClient
@@ -12,13 +14,14 @@ from windrose.sync.engine import SyncEngine
 from windrose.tray.icon import TrayIcon
 
 
-def launch() -> None:
+def launch(world: Optional[str] = typer.Option(None, "--world", "-w", help="World name to launch")) -> None:
     """Pull latest save, launch the game, sync back to Drive when done."""
     cfg = ConfigManager().load()
+    w = resolve_world(cfg, world)
     client = DriveClient(build_service())
-    engine = SyncEngine(cfg, client)
+    engine = SyncEngine(cfg, w, client)
 
-    typer.echo("Pulling latest save from Drive...")
+    typer.echo(f"Pulling latest save for '{w.name}' from Drive...")
     try:
         engine.pull()
         typer.echo("Save pulled.")
@@ -28,7 +31,7 @@ def launch() -> None:
     typer.echo(f"Launching {cfg.game_name}...")
     proc = launch_game(cfg.game_exe_path)
 
-    tray = TrayIcon(engine)
+    tray = TrayIcon(engine, w.name)
     tray_thread = threading.Thread(target=tray.run, daemon=True)
     tray_thread.start()
 

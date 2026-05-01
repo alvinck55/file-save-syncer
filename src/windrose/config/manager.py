@@ -16,14 +16,29 @@ from windrose.config.paths import CONFIG_FILE
 
 
 @dataclass
+class WorldConfig:
+    name: str
+    save_path: str
+    save_type: str          # "file" | "directory"
+    drive_file_id: str | None = field(default=None)
+
+
+@dataclass
 class WindroseConfig:
     game_name: str
     game_exe_path: str
-    save_path: str
-    save_type: str          # "file" | "directory"
     drive_folder_id: str
     drive_folder_name: str
-    drive_file_id: str | None = field(default=None)
+    worlds: list[WorldConfig] = field(default_factory=list)
+
+    def get_world(self, name: str) -> WorldConfig | None:
+        for w in self.worlds:
+            if w.name == name:
+                return w
+        return None
+
+    def default_world(self) -> WorldConfig | None:
+        return self.worlds[0] if self.worlds else None
 
 
 class ConfigManager:
@@ -36,31 +51,59 @@ class ConfigManager:
             data = tomllib.load(f)
         game = data["game"]
         drive = data["drive"]
+
+        if "worlds" in data:
+            worlds = [
+                WorldConfig(
+                    name=w["name"],
+                    save_path=w["save_path"],
+                    save_type=w["save_type"],
+                    drive_file_id=w.get("drive_file_id"),
+                )
+                for w in data["worlds"]
+            ]
+        else:
+            # Migrate old single-world format
+            worlds = [
+                WorldConfig(
+                    name="main",
+                    save_path=game["save_path"],
+                    save_type=game["save_type"],
+                    drive_file_id=drive.get("file_id"),
+                )
+            ]
+
         return WindroseConfig(
             game_name=game["name"],
             game_exe_path=game["exe_path"],
-            save_path=game["save_path"],
-            save_type=game["save_type"],
             drive_folder_id=drive["folder_id"],
             drive_folder_name=drive["folder_name"],
-            drive_file_id=drive.get("file_id"),
+            worlds=worlds,
         )
 
     def save(self, cfg: WindroseConfig) -> None:
+        worlds_data = []
+        for w in cfg.worlds:
+            entry: dict = {
+                "name": w.name,
+                "save_path": w.save_path,
+                "save_type": w.save_type,
+            }
+            if w.drive_file_id is not None:
+                entry["drive_file_id"] = w.drive_file_id
+            worlds_data.append(entry)
+
         data = {
             "game": {
                 "name": cfg.game_name,
                 "exe_path": cfg.game_exe_path,
-                "save_path": cfg.save_path,
-                "save_type": cfg.save_type,
             },
             "drive": {
                 "folder_id": cfg.drive_folder_id,
                 "folder_name": cfg.drive_folder_name,
             },
+            "worlds": worlds_data,
         }
-        if cfg.drive_file_id is not None:
-            data["drive"]["file_id"] = cfg.drive_file_id
 
         tmp = CONFIG_FILE.with_suffix(".toml.tmp")
         tmp.write_bytes(tomli_w.dumps(data).encode())

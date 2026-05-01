@@ -1,6 +1,6 @@
 # windrose-tool
 
-Automatically syncs your Windrose game save to Google Drive before and after each play session, so your whole group shares a single world.
+Automatically syncs your Windrose game save to Google Drive before and after each play session, so your whole group shares a single world. Supports multiple worlds (e.g. a vanilla save and a modded save) in the same config.
 
 **How it works:**
 1. You run `windrose launch` instead of launching the game directly
@@ -53,8 +53,8 @@ You'll be prompted for:
 |---|---|
 | Game name | `Windrose` |
 | Path to game executable | `C:\Program Files\Steam\steamapps\common\Windrose\Windrose.exe` |
+| Name for your first world | `main` |
 | Path to save file or folder | `C:\Users\you\AppData\LocalLow\Windrose\Saves` |
-| Path to client_secret.json | `C:\Users\you\Downloads\client_secret_xxx.json` |
 | Google Drive folder name | `windrose-saves` |
 
 A browser window will open for Google sign-in. After you approve, the tool saves your credentials locally and creates the Drive folder.
@@ -69,8 +69,14 @@ Make sure Steam is running, then:
 windrose launch
 ```
 
+If you have more than one world configured, pass `--world`:
+
+```bash
+windrose launch --world modded
+```
+
 This will:
-- Pull the latest world save from Google Drive
+- Pull the latest save for that world from Google Drive
 - Launch the game
 - Show a tray icon in your system tray (bottom-right on Windows)
 - Wait for you to close the game
@@ -95,15 +101,59 @@ Right-click the tray icon while the game is running:
 
 ---
 
-## Manual commands
+## Multiple worlds
 
-You can also sync without launching the game:
+You can keep multiple separate save paths in sync — for example a vanilla playthrough and a modded one. Each world has its own Drive file and is synced independently.
+
+### Add a world
+
+```bash
+windrose add-world modded "C:\Users\you\AppData\LocalLow\Windrose\ModdedSaves"
+```
+
+The path can be a single file or an entire folder. Folders are zipped on upload and extracted on download, preserving the full directory structure.
+
+### List all worlds
+
+```bash
+windrose list-worlds
+```
+
+```
+ Name    Type       Save path                          Drive file ID
+ main    directory  C:\...\Saves                       1abc...
+ modded  directory  C:\...\ModdedSaves                 (not yet synced)
+```
+
+### Launch, push, or pull a specific world
+
+```bash
+windrose launch --world modded
+windrose push   --world modded
+windrose pull   --world main
+```
+
+If you only have one world, the `--world` flag is optional and the single world is used automatically. With multiple worlds, omitting the flag will prompt you to choose.
+
+### Change a world's save path
+
+```bash
+windrose set-save "C:\new\path\to\saves" --world main
+```
+
+This updates the save path and clears the cached Drive file ID so the next push uploads fresh.
+
+---
+
+## Manual commands
 
 ```bash
 windrose push    # upload local save to Drive right now
 windrose pull    # download latest save from Drive right now
-windrose status  # show last sync time and direction
+windrose status  # show last sync time and direction for all worlds
 ```
+
+All three accept `--world <name>` when you have multiple worlds.
 
 ---
 
@@ -117,7 +167,7 @@ Since this is last-write-wins, coordinate with your group about who is actively 
 4. **Handing off mid-session:** right-click tray → **Push save now**, then tell the next player it's ready
 5. **If someone else pushed while you're mid-session:** right-click tray → **Pull save now** (confirm the overwrite)
 
-> Only one person should be playing at a time. Two simultaneous sessions will result in one player's progress being overwritten.
+> Only one person should be playing a given world at a time. Two simultaneous sessions will result in one player's progress being overwritten.
 
 ---
 
@@ -129,16 +179,24 @@ Your configuration lives at `~/.windrose/config.toml`:
 [game]
 name = "Windrose"
 exe_path = "C:\\Program Files\\Steam\\steamapps\\common\\Windrose\\Windrose.exe"
-save_path = "C:\\Users\\you\\AppData\\LocalLow\\Windrose\\Saves"
-save_type = "directory"
 
 [drive]
 folder_id = "1BxiM..."
 folder_name = "windrose-saves"
-file_id = "1abc..."
+
+[[worlds]]
+name = "main"
+save_path = "C:\\Users\\you\\AppData\\LocalLow\\Windrose\\Saves"
+save_type = "directory"
+drive_file_id = "1abc..."
+
+[[worlds]]
+name = "modded"
+save_path = "C:\\Users\\you\\AppData\\LocalLow\\Windrose\\ModdedSaves"
+save_type = "directory"
 ```
 
-To change the save path or executable, edit this file directly or re-run `windrose init`.
+> **Upgrading from an older version?** Configs with the old `save_path`/`save_type` fields under `[game]` are automatically migrated to a single world named `main` on the next run. No manual changes needed.
 
 ### Inviting other players
 
@@ -173,9 +231,9 @@ All windrose files are in `~/.windrose/`:
 
 | File | Purpose |
 |---|---|
-| `config.toml` | Your game and Drive configuration |
+| `config.toml` | Your game, Drive, and worlds configuration |
 | `token.json` | Your Google auth token (managed automatically) |
-| `state.json` | Last sync time and status |
+| `state.json` | Last sync time and status per world |
 
 ---
 
