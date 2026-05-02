@@ -9,7 +9,7 @@ from windrose.cli._world_utils import resolve_world
 from windrose.config.manager import ConfigManager
 from windrose.drive.auth import build_service
 from windrose.drive.client import DriveClient
-from windrose.launcher.game import launch_game
+from windrose.launcher.game import launch_game, wait_for_process
 from windrose.sync.engine import SyncEngine, WorldLockedError
 from windrose.tray.icon import TrayIcon
 
@@ -33,14 +33,15 @@ def launch(world: Optional[str] = typer.Option(None, "--world", "-w", help="Worl
     except Exception as e:
         typer.echo(f"Warning: could not pull save ({e}). Launching anyway.")
 
-    typer.echo(f"Launching {cfg.game_name}...")
-    proc = launch_game(cfg.game_exe_path)
+    typer.echo(f"Launching {cfg.game_name} via Steam...")
+    launch_game(cfg.steam_app_id)
 
     tray = TrayIcon(engine, w.name)
     tray_thread = threading.Thread(target=tray.run, daemon=True)
     tray_thread.start()
 
-    proc.wait()
+    typer.echo(f"Waiting for {cfg.game_name} to start...")
+    wait_for_process(cfg.game_process_name)
 
     tray.stop()
     tray_thread.join(timeout=3)

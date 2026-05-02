@@ -12,7 +12,37 @@ else:
 
 import tomli_w
 
-from windrose.config.paths import CONFIG_FILE
+from windrose.config.paths import CONFIG_FILE, GAME_FILE
+
+
+_GAME_DEFAULTS = {
+    "name": "Windrose",
+    "steam_app_id": "3041230",
+    "process_name": "Windrose.exe",
+}
+
+
+@dataclass
+class GameDefaults:
+    name: str
+    steam_app_id: str
+    process_name: str
+
+
+class GameDefaultsManager:
+    def load(self) -> GameDefaults:
+        if not GAME_FILE.exists():
+            self._write_defaults()
+        with open(GAME_FILE, "rb") as f:
+            data = tomllib.load(f)["game"]
+        return GameDefaults(
+            name=data["name"],
+            steam_app_id=data["steam_app_id"],
+            process_name=data["process_name"],
+        )
+
+    def _write_defaults(self) -> None:
+        GAME_FILE.write_bytes(tomli_w.dumps({"game": _GAME_DEFAULTS}).encode())
 
 
 @dataclass
@@ -26,7 +56,8 @@ class WorldConfig:
 @dataclass
 class WindroseConfig:
     game_name: str
-    game_exe_path: str
+    steam_app_id: str
+    game_process_name: str
     drive_folder_id: str
     drive_folder_name: str
     worlds: list[WorldConfig] = field(default_factory=list)
@@ -75,7 +106,8 @@ class ConfigManager:
 
         return WindroseConfig(
             game_name=game["name"],
-            game_exe_path=game["exe_path"],
+            steam_app_id=game["steam_app_id"],
+            game_process_name=game["process_name"],
             drive_folder_id=drive["folder_id"],
             drive_folder_name=drive["folder_name"],
             worlds=worlds,
@@ -96,7 +128,8 @@ class ConfigManager:
         data = {
             "game": {
                 "name": cfg.game_name,
-                "exe_path": cfg.game_exe_path,
+                "steam_app_id": cfg.steam_app_id,
+                "process_name": cfg.game_process_name,
             },
             "drive": {
                 "folder_id": cfg.drive_folder_id,

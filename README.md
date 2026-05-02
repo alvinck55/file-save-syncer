@@ -52,7 +52,6 @@ You'll be prompted for:
 | Prompt | Example |
 |---|---|
 | Game name | `Windrose` |
-| Path to game executable | `C:\Program Files\Steam\steamapps\common\Windrose\Windrose.exe` |
 | Name for your first world | `main` |
 | Path to save file or folder | `C:\Users\you\AppData\LocalLow\Windrose\Saves` |
 | Google Drive folder name | `windrose-saves` |
@@ -178,7 +177,8 @@ Your configuration lives at `~/.windrose/config.toml`:
 ```toml
 [game]
 name = "Windrose"
-exe_path = "C:\\Program Files\\Steam\\steamapps\\common\\Windrose\\Windrose.exe"
+steam_app_id = "3041230"
+process_name = "Windrose.exe"
 
 [drive]
 folder_id = "1BxiM..."
@@ -221,7 +221,7 @@ Once invited, each player runs the join command with the folder ID the host prov
 windrose join 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
 ```
 
-You'll be prompted for your game exe path and save path, then asked to sign in with Google. The tool verifies folder access before saving your config.
+You'll be prompted for your save path, then asked to sign in with Google. The tool verifies folder access before saving your config.
 
 ---
 
