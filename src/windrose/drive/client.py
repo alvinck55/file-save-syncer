@@ -81,6 +81,33 @@ class DriveClient:
             .execute()
         )
 
+    def upload_bytes(self, folder_id: str, filename: str, data: bytes) -> str:
+        from googleapiclient.http import MediaIoBaseUpload
+        media = MediaIoBaseUpload(io.BytesIO(data), mimetype="application/json")
+        metadata = {"name": filename, "parents": [folder_id]}
+        result = self._svc.files().create(body=metadata, media_body=media, fields="id").execute()
+        return result["id"]
+
+    def download_bytes(self, file_id: str) -> bytes:
+        request = self._svc.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        return fh.getvalue()
+
+    def delete_file(self, file_id: str) -> None:
+        self._svc.files().delete(fileId=file_id).execute()
+
+    def find_file_in_folder(self, filename: str, folder_id: str) -> str | None:
+        query = (
+            f"name='{filename}' and '{folder_id}' in parents and trashed=false"
+        )
+        results = self._svc.files().list(q=query, fields="files(id)").execute()
+        files = results.get("files", [])
+        return files[0]["id"] if files else None
+
     def invite_user(self, folder_id: str, email: str) -> None:
         self._svc.permissions().create(
             fileId=folder_id,

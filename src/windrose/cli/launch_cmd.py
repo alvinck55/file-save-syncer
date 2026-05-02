@@ -10,7 +10,7 @@ from windrose.config.manager import ConfigManager
 from windrose.drive.auth import build_service
 from windrose.drive.client import DriveClient
 from windrose.launcher.game import launch_game
-from windrose.sync.engine import SyncEngine
+from windrose.sync.engine import SyncEngine, WorldLockedError
 from windrose.tray.icon import TrayIcon
 
 
@@ -25,6 +25,11 @@ def launch(world: Optional[str] = typer.Option(None, "--world", "-w", help="Worl
     try:
         engine.pull()
         typer.echo("Save pulled.")
+    except WorldLockedError as e:
+        typer.echo(f"Cannot launch: '{w.name}' is checked out by {e.locked_by}.")
+        typer.echo("Wait for them to push, then run `windrose launch` again.")
+        typer.echo("Or ask them to host the game and join their server directly.")
+        raise typer.Exit(1)
     except Exception as e:
         typer.echo(f"Warning: could not pull save ({e}). Launching anyway.")
 

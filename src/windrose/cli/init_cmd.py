@@ -4,6 +4,7 @@ from pathlib import Path
 
 import typer
 
+from windrose.cli._world_utils import prompt_save_path
 from windrose.config.manager import ConfigManager, WindroseConfig, WorldConfig
 from windrose.drive.auth import run_oauth_flow, build_service
 from windrose.drive.client import DriveClient
@@ -22,15 +23,7 @@ def init() -> None:
 
     world_name = typer.prompt("Name for your first world", default="main")
 
-    save_path = typer.prompt("Full path to save file or save folder")
-    save_p = Path(save_path)
-    if save_p.is_dir():
-        save_type = "directory"
-    elif save_p.is_file():
-        save_type = "file"
-    else:
-        typer.echo(f"Error: path does not exist: {save_path}", err=True)
-        raise typer.Exit(1)
+    save_path, save_type = prompt_save_path()
 
     folder_name = typer.prompt("Google Drive folder name", default="windrose-saves")
 
