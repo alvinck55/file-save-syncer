@@ -51,6 +51,9 @@ class WorldConfig:
     save_path: str
     save_type: str          # "file" | "directory"
     drive_file_id: str | None = field(default=None)
+    mod_dir: str | None = field(default=None)
+    mod_sync: str = field(default="off")           # "off" | "manifest_only" | "upload_download"
+    mod_pull_strategy: str = field(default="merge") # "merge" | "replace"
 
 
 @dataclass
@@ -90,6 +93,9 @@ class ConfigManager:
                     save_path=w["save_path"],
                     save_type=w["save_type"],
                     drive_file_id=w.get("drive_file_id"),
+                    mod_dir=w.get("mod_dir"),
+                    mod_sync=w.get("mod_sync", "off"),
+                    mod_pull_strategy=w.get("mod_pull_strategy", "merge"),
                 )
                 for w in data["worlds"]
             ]
@@ -123,6 +129,10 @@ class ConfigManager:
             }
             if w.drive_file_id is not None:
                 entry["drive_file_id"] = w.drive_file_id
+            if w.mod_dir is not None:
+                entry["mod_dir"] = w.mod_dir
+                entry["mod_sync"] = w.mod_sync
+                entry["mod_pull_strategy"] = w.mod_pull_strategy
             worlds_data.append(entry)
 
         data = {

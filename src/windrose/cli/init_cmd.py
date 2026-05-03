@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typer
 
-from windrose.cli._world_utils import prompt_save_path
+from windrose.cli._world_utils import prompt_mod_config, prompt_save_path
 from windrose.config.manager import ConfigManager, GameDefaultsManager, WindroseConfig, WorldConfig
 from windrose.drive.auth import run_oauth_flow, build_service
 from windrose.drive.client import DriveClient
@@ -18,6 +18,7 @@ def init() -> None:
     world_name = typer.prompt("Name for your first world", default="main")
 
     save_path, save_type = prompt_save_path()
+    mod_dir, mod_sync, mod_pull_strategy = prompt_mod_config()
 
     folder_name = typer.prompt("Google Drive folder name", default="windrose-saves")
 
@@ -35,7 +36,14 @@ def init() -> None:
         game_process_name=game.process_name,
         drive_folder_id=folder_id,
         drive_folder_name=folder_name,
-        worlds=[WorldConfig(name=world_name, save_path=save_path, save_type=save_type)],
+        worlds=[WorldConfig(
+            name=world_name,
+            save_path=save_path,
+            save_type=save_type,
+            mod_dir=mod_dir,
+            mod_sync=mod_sync,
+            mod_pull_strategy=mod_pull_strategy,
+        )],
     )
     ConfigManager().save(cfg)
 

@@ -84,11 +84,18 @@ class DriveClient:
             .execute()
         )
 
-    def upload_bytes(self, folder_id: str, filename: str, data: bytes) -> str:
+    def upload_bytes(self, folder_id: str, filename: str, data: bytes, existing_file_id: str | None = None) -> str:
         from googleapiclient.http import MediaIoBaseUpload
-        media = MediaIoBaseUpload(io.BytesIO(data), mimetype="application/json")
-        metadata = {"name": filename, "parents": [folder_id]}
-        result = self._svc.files().create(body=metadata, media_body=media, fields="id").execute()
+        media = MediaIoBaseUpload(io.BytesIO(data), mimetype="application/octet-stream")
+        if existing_file_id:
+            result = (
+                self._svc.files()
+                .update(fileId=existing_file_id, media_body=media, fields="id")
+                .execute()
+            )
+        else:
+            metadata = {"name": filename, "parents": [folder_id]}
+            result = self._svc.files().create(body=metadata, media_body=media, fields="id").execute()
         return result["id"]
 
     def download_bytes(self, file_id: str) -> bytes:

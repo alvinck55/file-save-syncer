@@ -24,6 +24,9 @@ htmlcov/
 # macOS
 .DS_Store
 
+# Claude Code
+.claude/
+
 # Secrets — should never live in the repo
 client_secret*.json
 !src/windrose/data/client_secret.json

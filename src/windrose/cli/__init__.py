@@ -11,6 +11,7 @@ from windrose.cli import (  # noqa: E402, F401
     pull_cmd,
     status_cmd,
     set_save_cmd,
+    set_mods_cmd,
     add_world_cmd,
     list_worlds_cmd,
 )
@@ -23,5 +24,6 @@ app.command("push")(push_cmd.push)
 app.command("pull")(pull_cmd.pull)
 app.command("status")(status_cmd.status)
 app.command("set-save")(set_save_cmd.set_save)
+app.command("set-mods")(set_mods_cmd.set_mods)
 app.command("add-world")(add_world_cmd.add_world)
 app.command("list-worlds")(list_worlds_cmd.list_worlds)

@@ -64,6 +64,11 @@ class SyncEngine:
 
         _write_state(self._world.name, direction="push")
 
+        if self._world.mod_dir:
+            mod_dir = Path(self._world.mod_dir)
+            if mod_dir.is_dir():
+                self._push_mods(mod_dir)
+
     def pull(self) -> None:
         save_path = Path(self._world.save_path)
         lock_filename = save_path.name + ".lock"
@@ -119,6 +124,119 @@ class SyncEngine:
 
         _write_state(self._world.name, direction="pull")
 
+        if self._world.mod_dir:
+            self._pull_mods(Path(self._world.mod_dir))
+
+    def _push_mods(self, mod_dir: Path) -> None:
+        from windrose.mods.manager import build_manifest, diff_mod_lists, zip_mod_dir
+        world_name = self._world.name
+        manifest = build_manifest(mod_dir)
+        mod_count = len(manifest["mods"])
+
+        # Tier 1: local cache — free, no network call
+        cached = _get_last_pushed_mods(world_name)
+        if cached is not None:
+            diff = diff_mod_lists(manifest["mods"], cached)
+            if not diff["missing"] and not diff["extra"] and not diff["changed"]:
+                print(f"Mods unchanged — skipping upload ({mod_count} mod(s)).")
+                return
+
+        # Tier 2: cache miss — download Drive manifest once to avoid a redundant upload
+        existing_manifest_id = _get_mod_manifest_file_id(world_name)
+        if existing_manifest_id:
+            try:
+                remote_manifest = json.loads(self._client.download_bytes(existing_manifest_id))
+                diff = diff_mod_lists(manifest["mods"], remote_manifest.get("mods", []))
+                if not diff["missing"] and not diff["extra"] and not diff["changed"]:
+                    _set_last_pushed_mods(world_name, manifest["mods"])
+                    print(f"Mods unchanged — skipping upload ({mod_count} mod(s)).")
+                    return
+            except Exception:
+                pass
+
+        print(f"Uploading mod manifest ({mod_count} mod(s))...")
+        manifest_data = json.dumps(manifest, indent=2).encode()
+        manifest_id = self._client.upload_bytes(
+            self._cfg.drive_folder_id,
+            f"{world_name}-mods.json",
+            manifest_data,
+            existing_manifest_id,
+        )
+        zip_id = _get_mod_zip_file_id(world_name)
+        if self._world.mod_sync == "upload_download":
+            print("Uploading mod files to Drive...")
+            tmp_zip = zip_mod_dir(mod_dir)
+            try:
+                zip_id = self._client.upload_file(
+                    tmp_zip,
+                    self._cfg.drive_folder_id,
+                    f"{world_name}-mods.zip",
+                    zip_id,
+                )
+            finally:
+                tmp_zip.unlink(missing_ok=True)
+        _update_mod_file_ids(world_name, manifest_id, zip_id)
+        _set_last_pushed_mods(world_name, manifest["mods"])
+
+    def _pull_mods(self, mod_dir: Path) -> None:
+        from windrose.mods.manager import scan_mod_dir, diff_mod_lists, install_mods
+        world_name = self._world.name
+        print("Checking mods...")
+        manifest_file_id = _get_mod_manifest_file_id(world_name)
+        if not manifest_file_id:
+            manifest_file_id = self._client.find_file_in_folder(
+                f"{world_name}-mods.json", self._cfg.drive_folder_id
+            )
+            if not manifest_file_id:
+                print("No mod manifest on Drive — skipping mod check.")
+                return
+            _update_mod_file_ids(world_name, manifest_file_id, None)
+        try:
+            remote_manifest = json.loads(self._client.download_bytes(manifest_file_id))
+        except Exception:
+            print("Could not read mod manifest from Drive — skipping mod check.")
+            return
+        remote_mods = remote_manifest.get("mods", [])
+        local_mods = scan_mod_dir(mod_dir) if mod_dir.is_dir() else []
+        diff = diff_mod_lists(local_mods, remote_mods)
+        has_mismatch = bool(diff["missing"] or diff["changed"])
+        if not has_mismatch and not diff["extra"]:
+            print(f"Mods OK — {len(local_mods)} mod(s) installed.")
+        else:
+            print("Mod mismatch detected:")
+            if diff["missing"]:
+                print("  Missing locally:  " + ", ".join(diff["missing"]))
+            if diff["extra"]:
+                print("  Extra locally:    " + ", ".join(diff["extra"]))
+            if diff["changed"]:
+                print("  Changed:          " + ", ".join(diff["changed"]))
+        if self._world.mod_sync == "upload_download" and has_mismatch:
+            zip_file_id = _get_mod_zip_file_id(world_name)
+            if not zip_file_id:
+                zip_file_id = self._client.find_file_in_folder(
+                    f"{world_name}-mods.zip", self._cfg.drive_folder_id
+                )
+                if zip_file_id:
+                    _update_mod_file_ids(world_name, manifest_file_id, zip_file_id)
+            if zip_file_id:
+                answer = input("Install mods from Drive? [Y/n] ").strip().lower()
+                if answer not in ("", "y", "yes"):
+                    print("Skipping mod install.")
+                else:
+                    print("Downloading and installing mods from Drive...")
+                    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tf:
+                        tmp_zip = Path(tf.name)
+                    try:
+                        self._client.download_file(zip_file_id, tmp_zip)
+                        installed = install_mods(tmp_zip, mod_dir, self._world.mod_pull_strategy)
+                        print(f"Mods installed ({len(installed)} file(s)).")
+                        if self._world.mod_pull_strategy == "replace":
+                            print("Warning: mods replaced — other worlds using different mods may be affected.")
+                    finally:
+                        tmp_zip.unlink(missing_ok=True)
+        elif self._world.mod_sync == "manifest_only" and has_mismatch:
+            print("Install missing mods from Nexus Mods before loading this save.")
+
     def _zip_directory(self, dir_path: Path) -> Path:
         fd, tmp = tempfile.mkstemp(suffix=".zip")
         os.close(fd)
@@ -165,6 +283,9 @@ def _write_state(world_name: str, direction: str, error: str | None = None) -> N
         "direction": direction,
         "error": error,
         "lock_file_id": existing.get("lock_file_id"),
+        "mod_manifest_file_id": existing.get("mod_manifest_file_id"),
+        "mod_zip_file_id": existing.get("mod_zip_file_id"),
+        "last_pushed_mods": existing.get("last_pushed_mods"),
     }
     _save_state(state)
 
@@ -176,4 +297,32 @@ def _get_lock_file_id(world_name: str) -> str | None:
 def _update_lock_file_id(world_name: str, lock_file_id: str | None) -> None:
     state = _load_state()
     state.setdefault(world_name, {})["lock_file_id"] = lock_file_id
+    _save_state(state)
+
+
+def _get_mod_manifest_file_id(world_name: str) -> str | None:
+    return _load_state().get(world_name, {}).get("mod_manifest_file_id")
+
+
+def _get_mod_zip_file_id(world_name: str) -> str | None:
+    return _load_state().get(world_name, {}).get("mod_zip_file_id")
+
+
+def _update_mod_file_ids(world_name: str, manifest_file_id: str | None, zip_file_id: str | None) -> None:
+    state = _load_state()
+    world_state = state.setdefault(world_name, {})
+    if manifest_file_id is not None:
+        world_state["mod_manifest_file_id"] = manifest_file_id
+    if zip_file_id is not None:
+        world_state["mod_zip_file_id"] = zip_file_id
+    _save_state(state)
+
+
+def _get_last_pushed_mods(world_name: str) -> list[dict] | None:
+    return _load_state().get(world_name, {}).get("last_pushed_mods")
+
+
+def _set_last_pushed_mods(world_name: str, mods: list[dict]) -> None:
+    state = _load_state()
+    state.setdefault(world_name, {})["last_pushed_mods"] = mods
     _save_state(state)

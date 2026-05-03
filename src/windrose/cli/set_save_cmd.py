@@ -34,4 +34,4 @@ def set_save(
 
     kind = "folder" if save_type == "directory" else "file"
     typer.echo(f"World '{w.name}' save path updated to {kind}: {save_p}")
-    typer.echo("Run `windrose push` to upload it now, or `windrose launch` to start playing.")
+    typer.echo("Run `windrose-save-sync push` to upload it now, or `windrose-save-sync launch` to start playing.")
