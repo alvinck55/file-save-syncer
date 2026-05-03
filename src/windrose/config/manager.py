@@ -106,8 +106,8 @@ class ConfigManager:
 
         return WindroseConfig(
             game_name=game["name"],
-            steam_app_id=game["steam_app_id"],
-            game_process_name=game["process_name"],
+            steam_app_id=game.get("steam_app_id", _GAME_DEFAULTS["steam_app_id"]),
+            game_process_name=game.get("process_name", _GAME_DEFAULTS["process_name"]),
             drive_folder_id=drive["folder_id"],
             drive_folder_name=drive["folder_name"],
             worlds=worlds,

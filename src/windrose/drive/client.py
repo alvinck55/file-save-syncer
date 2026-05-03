@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload
 
 
 class DriveClient:
@@ -37,7 +37,10 @@ class DriveClient:
         drive_filename: str,
         existing_file_id: str | None = None,
     ) -> str:
-        media = MediaFileUpload(str(local_path), resumable=True)
+        from googleapiclient.http import MediaIoBaseUpload
+        with open(local_path, "rb") as f:
+            data = f.read()
+        media = MediaIoBaseUpload(io.BytesIO(data), mimetype="application/octet-stream", resumable=True)
         if existing_file_id:
             result = (
                 self._svc.files()

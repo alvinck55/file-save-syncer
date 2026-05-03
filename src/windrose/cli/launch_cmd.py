@@ -40,13 +40,20 @@ def launch(world: Optional[str] = typer.Option(None, "--world", "-w", help="Worl
     tray_thread = threading.Thread(target=tray.run, daemon=True)
     tray_thread.start()
 
-    typer.echo(f"Waiting for {cfg.game_name} to start...")
-    wait_for_process(cfg.game_process_name)
+    typer.echo(f"Waiting for {cfg.game_name} to start...", nl=False)
+    found = wait_for_process(
+        cfg.game_process_name,
+        on_poll=lambda: typer.echo(".", nl=False),
+        on_found=lambda: typer.echo(f"\n{cfg.game_name} is running. Waiting for it to close..."),
+    )
 
     tray.stop()
     tray_thread.join(timeout=3)
 
-    typer.echo("Game closed. Pushing save to Drive...")
+    if not found:
+        typer.echo(f"Warning: {cfg.game_name} process was not detected. Pushing save anyway...")
+    else:
+        typer.echo("Game closed. Pushing save to Drive...")
     try:
         engine.push()
         typer.echo("Save pushed. Done.")

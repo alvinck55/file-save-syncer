@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-windrose = "windrose.cli:app"
+windrose-save-sync = "windrose.cli:app"
 
 [project.optional-dependencies]
 dev = [
