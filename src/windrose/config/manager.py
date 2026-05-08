@@ -15,18 +15,31 @@ import tomli_w
 from windrose.config.paths import CONFIG_FILE, GAME_FILE
 
 
-_GAME_DEFAULTS = {
-    "name": "Windrose",
-    "steam_app_id": "3041230",
-    "process_name": "Windrose.exe",
+_GAME_REGISTRY: dict[str, dict] = {
+    "windrose": {
+        "name": "Windrose",
+        "steam_app_id": "3041230",
+        "process_name": "Windrose.exe",
+        "supports_mods": True,
+    },
+    "enshrouded": {
+        "name": "Enshrouded",
+        "steam_app_id": "1203620",
+        "process_name": "enshrouded.exe",
+        "supports_mods": False,
+    },
 }
+
+_GAME_DEFAULTS = _GAME_REGISTRY["windrose"]
 
 
 @dataclass
 class GameDefaults:
+    key: str
     name: str
     steam_app_id: str
     process_name: str
+    supports_mods: bool
 
 
 class GameDefaultsManager:
@@ -36,9 +49,11 @@ class GameDefaultsManager:
         with open(GAME_FILE, "rb") as f:
             data = tomllib.load(f)["game"]
         return GameDefaults(
+            key="windrose",
             name=data["name"],
             steam_app_id=data["steam_app_id"],
             process_name=data["process_name"],
+            supports_mods=data.get("supports_mods", True),
         )
 
     def _write_defaults(self) -> None:
@@ -63,6 +78,7 @@ class WindroseConfig:
     game_process_name: str
     drive_folder_id: str
     drive_folder_name: str
+    supports_mods: bool = field(default=True)
     worlds: list[WorldConfig] = field(default_factory=list)
 
     def get_world(self, name: str) -> WorldConfig | None:
@@ -79,7 +95,7 @@ class ConfigManager:
     def load(self) -> WindroseConfig:
         if not CONFIG_FILE.exists():
             raise FileNotFoundError(
-                f"No config found at {CONFIG_FILE}. Run `windrose init` first."
+                f"No config found at {CONFIG_FILE}. Run `alvault init` first."
             )
         with open(CONFIG_FILE, "rb") as f:
             data = tomllib.load(f)
@@ -114,6 +130,7 @@ class ConfigManager:
             game_name=game["name"],
             steam_app_id=game.get("steam_app_id", _GAME_DEFAULTS["steam_app_id"]),
             game_process_name=game.get("process_name", _GAME_DEFAULTS["process_name"]),
+            supports_mods=game.get("supports_mods", True),
             drive_folder_id=drive["folder_id"],
             drive_folder_name=drive["folder_name"],
             worlds=worlds,
@@ -140,6 +157,7 @@ class ConfigManager:
                 "name": cfg.game_name,
                 "steam_app_id": cfg.steam_app_id,
                 "process_name": cfg.game_process_name,
+                "supports_mods": cfg.supports_mods,
             },
             "drive": {
                 "folder_id": cfg.drive_folder_id,

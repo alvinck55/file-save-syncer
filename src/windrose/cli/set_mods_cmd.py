@@ -24,6 +24,6 @@ def set_mods(
 
     if mod_dir:
         typer.echo(f"Mod sync configured for world '{w.name}' ({mod_sync}).")
-        typer.echo("Run `windrose-save-sync push` to upload the mod manifest now.")
+        typer.echo("Run `alvault push` to upload the mod manifest now.")
     else:
         typer.echo(f"Mod sync disabled for world '{w.name}'.")

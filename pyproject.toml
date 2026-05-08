@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "windrose"
+name = "alvault"
 version = "0.1.0"
-description = "Game save sync to Google Drive for Windrose"
+description = "Game save sync to Google Drive for co-op play"
 requires-python = ">=3.9"
 dependencies = [
     "typer[all]>=0.23.2",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-windrose-save-sync = "windrose.cli:app"
+alvault = "windrose.cli:app"
 
 [project.optional-dependencies]
 dev = [

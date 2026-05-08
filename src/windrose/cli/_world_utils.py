@@ -5,7 +5,18 @@ from pathlib import Path
 
 import typer
 
-from windrose.config.manager import WindroseConfig, WorldConfig
+from windrose.config.manager import _GAME_REGISTRY, GameDefaults, WindroseConfig, WorldConfig
+
+
+def prompt_game_selection() -> GameDefaults:
+    games = list(_GAME_REGISTRY.items())
+    typer.echo("Select game:")
+    for i, (_, g) in enumerate(games, 1):
+        typer.echo(f"  [{i}] {g['name']}")
+    raw = typer.prompt("Game", default="1")
+    idx = (int(raw) - 1) if raw.isdigit() and 1 <= int(raw) <= len(games) else 0
+    key, g = games[idx]
+    return GameDefaults(key=key, **g)
 
 
 def _discover_mod_dir() -> Path | None:
@@ -54,7 +65,11 @@ def prompt_mod_config() -> tuple[str | None, str, str]:
     return str(mod_dir_path), mod_sync, "merge"
 
 
-def _discover_save_paths() -> list[Path]:
+def _discover_save_paths(game_key: str = "windrose") -> list[Path]:
+    if game_key == "enshrouded":
+        user_profile = os.environ.get("USERPROFILE", str(Path.home()))
+        p = Path(user_profile) / "Saved Games" / "Enshrouded"
+        return [p] if p.is_dir() else []
     local_app_data = os.environ.get("LOCALAPPDATA")
     if not local_app_data:
         return []
@@ -64,12 +79,12 @@ def _discover_save_paths() -> list[Path]:
     return sorted(base.glob("*/RocksDB/*/Worlds"))
 
 
-def prompt_save_path() -> tuple[str, str]:
+def prompt_save_path(game_key: str = "windrose") -> tuple[str, str]:
     """Prompt for the save path, auto-detecting common locations as defaults.
 
     Returns (save_path, save_type) where save_type is 'file' or 'directory'.
     """
-    candidates = _discover_save_paths()
+    candidates = _discover_save_paths(game_key)
 
     if len(candidates) == 1:
         save_path = typer.prompt("Full path to save file or save folder", default=str(candidates[0]))
@@ -99,7 +114,7 @@ def resolve_world(cfg: WindroseConfig, world_name: str | None) -> WorldConfig:
     if world_name:
         world = cfg.get_world(world_name)
         if world is None:
-            typer.echo(f"Error: world '{world_name}' not found. Run `windrose list-worlds` to see available worlds.", err=True)
+            typer.echo(f"Error: world '{world_name}' not found. Run `alvault list-worlds` to see available worlds.", err=True)
             raise typer.Exit(1)
         return world
 

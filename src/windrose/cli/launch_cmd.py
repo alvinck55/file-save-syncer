@@ -27,7 +27,7 @@ def launch(world: Optional[str] = typer.Option(None, "--world", "-w", help="Worl
         typer.echo("Save pulled.")
     except WorldLockedError as e:
         typer.echo(f"Cannot launch: '{w.name}' is checked out by {e.locked_by}.")
-        typer.echo("Wait for them to push, then run `windrose launch` again.")
+        typer.echo("Wait for them to push, then run `alvault launch` again.")
         typer.echo("Or ask them to host the game and join their server directly.")
         raise typer.Exit(1)
     except Exception as e:

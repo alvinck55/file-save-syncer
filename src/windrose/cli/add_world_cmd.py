@@ -30,7 +30,10 @@ def add_world(
         raise typer.Exit(1)
 
     kind = "folder" if save_type == "directory" else "file"
-    mod_dir, mod_sync, mod_pull_strategy = prompt_mod_config()
+    if cfg.supports_mods:
+        mod_dir, mod_sync, mod_pull_strategy = prompt_mod_config()
+    else:
+        mod_dir, mod_sync, mod_pull_strategy = None, "off", "merge"
     cfg.worlds.append(WorldConfig(
         name=name,
         save_path=str(save_p),
@@ -42,4 +45,4 @@ def add_world(
     mgr.save(cfg)
 
     typer.echo(f"World '{name}' added ({kind}: {save_p}).")
-    typer.echo(f"Run `windrose push --world {name}` to upload it.")
+    typer.echo(f"Run `alvault push --world {name}` to upload it.")

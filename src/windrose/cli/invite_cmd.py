@@ -19,4 +19,4 @@ def invite(email: str = typer.Argument(..., help="Gmail address of the player to
         raise typer.Exit(1)
 
     typer.echo(f"Invited {email} — they'll receive an email from Google.")
-    typer.echo(f"Tell them to run: windrose join {cfg.drive_folder_id}")
+    typer.echo(f"Tell them to run: alvault join {cfg.drive_folder_id}")

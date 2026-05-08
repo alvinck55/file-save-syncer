@@ -21,7 +21,7 @@ class AuthError(Exception):
 
 def load_credentials() -> Credentials:
     if not TOKEN_FILE.exists():
-        raise AuthError("Not authenticated. Run `windrose init` first.")
+        raise AuthError("Not authenticated. Run `alvault init` first.")
 
     creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
 

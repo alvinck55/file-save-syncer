@@ -15,7 +15,7 @@ console = Console()
 def status() -> None:
     """Show last sync time and direction for each world."""
     if not STATE_FILE.exists():
-        typer.echo("No sync history found. Run `windrose launch` or `windrose push` first.")
+        typer.echo("No sync history found. Run `alvault launch` or `alvault push` first.")
         return
 
     data = json.loads(STATE_FILE.read_text())

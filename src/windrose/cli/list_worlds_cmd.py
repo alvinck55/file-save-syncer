@@ -13,7 +13,7 @@ def list_worlds() -> None:
     cfg = ConfigManager().load()
 
     if not cfg.worlds:
-        console.print("No worlds configured. Run `windrose add-world <name> <path>`.")
+        console.print("No worlds configured. Run `alvault add-world <name> <path>`.")
         return
 
     table = Table(show_header=True)

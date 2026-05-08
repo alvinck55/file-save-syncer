@@ -123,6 +123,6 @@ class DriveClient:
             fileId=folder_id,
             body={"type": "user", "role": "writer", "emailAddress": email},
             sendNotificationEmail=True,
-            emailMessage="You've been invited to join a Windrose shared world. Run `windrose join` with the folder ID to get started.",
+            emailMessage="You've been invited to join a shared world via alvault. Run `alvault join` with the folder ID to get started.",
             fields="id",
         ).execute()

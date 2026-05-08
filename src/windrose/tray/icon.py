@@ -8,8 +8,8 @@ from pathlib import Path
 import pystray
 from PIL import Image, ImageDraw
 
-from windrose.config.paths import STATE_FILE
-from windrose.sync.engine import SyncEngine, WorldLockedError
+from alvault.config.paths import STATE_FILE
+from alvault.sync.engine import SyncEngine, WorldLockedError
 
 
 def _make_image() -> Image.Image:
@@ -47,9 +47,9 @@ class TrayIcon:
 
     def run(self) -> None:
         self._icon = pystray.Icon(
-            "windrose",
+            "alvault",
             _make_image(),
-            "windrose",
+            "alvault",
             menu=self._make_menu(),
         )
         self._schedule_update()
@@ -97,7 +97,7 @@ class TrayIcon:
             self._engine.pull()
             self._refresh_menu()
         except WorldLockedError as e:
-            self._notify(f"Pull blocked: {e.locked_by} has this world checked out. Your local save is hidden. Wait for them to push, then use 'windrose pull'.")
+            self._notify(f"Pull blocked: {e.locked_by} has this world checked out. Your local save is hidden. Wait for them to push, then use 'alvault pull'.")
         except Exception as e:
             self._notify(f"Pull failed: {e}")
 
@@ -117,4 +117,4 @@ class TrayIcon:
 
     def _notify(self, message: str) -> None:
         if self._icon:
-            self._icon.notify(message, "windrose")
+            self._icon.notify(message, "alvault")
