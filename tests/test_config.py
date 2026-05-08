@@ -1,9 +1,9 @@
-import pytest
-from windrose.config.manager import ConfigManager, WindroseConfig, WorldConfig
+﻿import pytest
+from alvault.config.manager import ConfigManager, AlvaultConfig, WorldConfig
 
 
-def _sample_cfg() -> WindroseConfig:
-    return WindroseConfig(
+def _sample_cfg() -> AlvaultConfig:
+    return AlvaultConfig(
         game_name="Windrose",
         game_exe_path="/path/to/Windrose.exe",
         drive_folder_id="folder123",
@@ -14,9 +14,9 @@ def _sample_cfg() -> WindroseConfig:
     )
 
 
-def test_round_trip(tmp_windrose_dir, monkeypatch):
-    import windrose.config.manager as mgr_mod
-    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_windrose_dir / "config.toml")
+def test_round_trip(tmp_alvault_dir, monkeypatch):
+    import alvault.config.manager as mgr_mod
+    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_alvault_dir / "config.toml")
 
     mgr = ConfigManager()
     cfg = _sample_cfg()
@@ -33,9 +33,9 @@ def test_round_trip(tmp_windrose_dir, monkeypatch):
     assert loaded.worlds[0].drive_file_id is None
 
 
-def test_round_trip_with_file_id(tmp_windrose_dir, monkeypatch):
-    import windrose.config.manager as mgr_mod
-    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_windrose_dir / "config.toml")
+def test_round_trip_with_file_id(tmp_alvault_dir, monkeypatch):
+    import alvault.config.manager as mgr_mod
+    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_alvault_dir / "config.toml")
 
     mgr = ConfigManager()
     cfg = _sample_cfg()
@@ -46,12 +46,12 @@ def test_round_trip_with_file_id(tmp_windrose_dir, monkeypatch):
     assert loaded.worlds[0].drive_file_id == "abc123"
 
 
-def test_multiple_worlds_round_trip(tmp_windrose_dir, monkeypatch):
-    import windrose.config.manager as mgr_mod
-    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_windrose_dir / "config.toml")
+def test_multiple_worlds_round_trip(tmp_alvault_dir, monkeypatch):
+    import alvault.config.manager as mgr_mod
+    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_alvault_dir / "config.toml")
 
     mgr = ConfigManager()
-    cfg = WindroseConfig(
+    cfg = AlvaultConfig(
         game_name="Windrose",
         game_exe_path="/path/to/Windrose.exe",
         drive_folder_id="folder123",
@@ -69,9 +69,9 @@ def test_multiple_worlds_round_trip(tmp_windrose_dir, monkeypatch):
     assert loaded.get_world("modded").drive_file_id is None
 
 
-def test_migrate_old_format(tmp_windrose_dir, monkeypatch):
-    import windrose.config.manager as mgr_mod
-    config_file = tmp_windrose_dir / "config.toml"
+def test_migrate_old_format(tmp_alvault_dir, monkeypatch):
+    import alvault.config.manager as mgr_mod
+    config_file = tmp_alvault_dir / "config.toml"
     monkeypatch.setattr(mgr_mod, "CONFIG_FILE", config_file)
 
     old_toml = (
@@ -88,17 +88,17 @@ def test_migrate_old_format(tmp_windrose_dir, monkeypatch):
     assert loaded.worlds[0].drive_file_id == "fid"
 
 
-def test_missing_config_raises(tmp_windrose_dir, monkeypatch):
-    import windrose.config.manager as mgr_mod
-    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_windrose_dir / "config.toml")
+def test_missing_config_raises(tmp_alvault_dir, monkeypatch):
+    import alvault.config.manager as mgr_mod
+    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_alvault_dir / "config.toml")
 
-    with pytest.raises(FileNotFoundError, match="windrose init"):
+    with pytest.raises(FileNotFoundError, match="alvault init"):
         ConfigManager().load()
 
 
-def test_exists(tmp_windrose_dir, monkeypatch):
-    import windrose.config.manager as mgr_mod
-    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_windrose_dir / "config.toml")
+def test_exists(tmp_alvault_dir, monkeypatch):
+    import alvault.config.manager as mgr_mod
+    monkeypatch.setattr(mgr_mod, "CONFIG_FILE", tmp_alvault_dir / "config.toml")
 
     mgr = ConfigManager()
     assert not mgr.exists()
@@ -106,7 +106,7 @@ def test_exists(tmp_windrose_dir, monkeypatch):
     assert mgr.exists()
 
 
-def test_get_world(tmp_windrose_dir):
+def test_get_world(tmp_alvault_dir):
     cfg = _sample_cfg()
     assert cfg.get_world("main") is cfg.worlds[0]
     assert cfg.get_world("missing") is None
@@ -118,7 +118,7 @@ def test_default_world_single():
 
 
 def test_default_world_empty():
-    cfg = WindroseConfig(
+    cfg = AlvaultConfig(
         game_name="Windrose",
         game_exe_path="/path/to/Windrose.exe",
         drive_folder_id="f1",

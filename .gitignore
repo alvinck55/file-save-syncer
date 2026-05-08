@@ -29,6 +29,6 @@ htmlcov/
 
 # Secrets — should never live in the repo
 client_secret*.json
-!src/windrose/data/client_secret.json
+!src/alvault/data/client_secret.json
 token.json
 *.toml.tmp

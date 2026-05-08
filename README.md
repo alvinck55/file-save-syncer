@@ -1,4 +1,4 @@
-# alvault
+﻿# alvault
 
 Automatically syncs your game save to Google Drive before and after each play session, so your whole group shares a single world. Supports Windrose and Enshrouded, with multiple worlds per game in the same config.
 
@@ -210,7 +210,7 @@ Since this is last-write-wins, coordinate with your group about who is actively 
 
 ## Config file
 
-Your configuration lives at `~/.windrose/config.toml`:
+Your configuration lives at `~/.alvault/config.toml`:
 
 **Windrose example:**
 ```toml
@@ -289,7 +289,7 @@ You'll be prompted to select your game and save path, then asked to sign in with
 
 ## Files stored locally
 
-All alvault files are in `~/.windrose/`:
+All alvault files are in `~/.alvault/`:
 
 | File | Purpose |
 |---|---|
@@ -311,7 +311,7 @@ Manually navigate to the URL printed in the terminal to complete OAuth.
 Make sure Steam is running and you're logged in before running `alvault launch`.
 
 **"Auth token expired" error**
-Delete `~/.windrose/token.json` and re-run `alvault init` to re-authenticate.
+Delete `~/.alvault/token.json` and re-run `alvault init` to re-authenticate.
 
 **Push failed / Drive unreachable**
 Check your internet connection. Run `alvault push` manually once you're back online.
@@ -322,12 +322,12 @@ Check your internet connection. Run `alvault push` manually once you're back onl
 
 > This section is only for the person maintaining and distributing the tool — not for players.
 
-The file `src/windrose/data/client_secret.json` is a placeholder. Before distributing the tool you must replace it with real GCP credentials:
+The file `src/alvault/data/client_secret.json` is a placeholder. Before distributing the tool you must replace it with real GCP credentials:
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Create a project, enable the **Google Drive API**
 3. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
 4. Choose **Desktop app**, download the JSON
-5. Replace `src/windrose/data/client_secret.json` with the downloaded file
+5. Replace `src/alvault/data/client_secret.json` with the downloaded file
 
 Players who install the tool will use these credentials automatically — they only need to sign in with their own Google account.

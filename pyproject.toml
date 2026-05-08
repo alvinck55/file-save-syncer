@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-alvault = "windrose.cli:app"
+alvault = "alvault.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -31,8 +31,8 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/windrose"]
-artifacts = ["src/windrose/data/client_secret.json"]
+packages = ["src/alvault"]
+artifacts = ["src/alvault/data/client_secret.json"]
 
 [tool.ruff]
 target-version = "py39"

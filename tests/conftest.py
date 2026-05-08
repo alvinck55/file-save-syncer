@@ -1,12 +1,12 @@
-import pytest
+﻿import pytest
 from pathlib import Path
 
 
 @pytest.fixture
-def tmp_windrose_dir(tmp_path, monkeypatch):
-    """Redirect all ~/.windrose/ paths to a temp directory."""
-    import windrose.config.paths as paths
-    monkeypatch.setattr(paths, "WINDROSE_DIR", tmp_path)
+def tmp_alvault_dir(tmp_path, monkeypatch):
+    """Redirect all ~/.alvault/ paths to a temp directory."""
+    import alvault.config.paths as paths
+    monkeypatch.setattr(paths, "ALVAULT_DIR", tmp_path)
     monkeypatch.setattr(paths, "CONFIG_FILE", tmp_path / "config.toml")
     monkeypatch.setattr(paths, "TOKEN_FILE", tmp_path / "token.json")
     monkeypatch.setattr(paths, "STATE_FILE", tmp_path / "state.json")

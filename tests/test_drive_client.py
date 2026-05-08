@@ -1,8 +1,8 @@
-from pathlib import Path
+﻿from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
 
-from windrose.drive.client import DriveClient
+from alvault.drive.client import DriveClient
 
 
 def _make_client():
@@ -46,12 +46,12 @@ def test_download_file(tmp_path):
 
     dest = tmp_path / "save.sav"
 
-    with patch("windrose.drive.client.MediaIoBaseDownload") as mock_dl_cls:
+    with patch("alvault.drive.client.MediaIoBaseDownload") as mock_dl_cls:
         mock_dl_cls.return_value = mock_downloader
-        with patch("windrose.drive.client.io.FileIO") as mock_fio:
+        with patch("alvault.drive.client.io.FileIO") as mock_fio:
             mock_fio.return_value.__enter__ = MagicMock(return_value=MagicMock())
             mock_fio.return_value.__exit__ = MagicMock(return_value=False)
-            with patch("windrose.drive.client.os.replace"):
+            with patch("alvault.drive.client.os.replace"):
                 client.download_file("file_id", dest)
 
     svc.files().get_media.assert_called_once_with(fileId="file_id")

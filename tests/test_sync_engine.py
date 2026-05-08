@@ -1,16 +1,16 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
 
-from windrose.config.manager import WindroseConfig, WorldConfig
-from windrose.sync.engine import SyncEngine
+from alvault.config.manager import AlvaultConfig, WorldConfig
+from alvault.sync.engine import SyncEngine
 
 
 def _cfg_and_world(save_path: str, save_type: str, file_id: str | None = None):
     world = WorldConfig(name="main", save_path=save_path, save_type=save_type, drive_file_id=file_id)
-    cfg = WindroseConfig(
+    cfg = AlvaultConfig(
         game_name="Windrose",
         game_exe_path="/game/Windrose.exe",
         drive_folder_id="folder123",
@@ -21,7 +21,7 @@ def _cfg_and_world(save_path: str, save_type: str, file_id: str | None = None):
 
 
 def test_push_single_file(tmp_path, monkeypatch):
-    import windrose.sync.engine as eng
+    import alvault.sync.engine as eng
     monkeypatch.setattr(eng, "STATE_FILE", tmp_path / "state.json")
 
     save = tmp_path / "save.sav"
@@ -38,7 +38,7 @@ def test_push_single_file(tmp_path, monkeypatch):
 
 
 def test_push_directory(tmp_path, monkeypatch):
-    import windrose.sync.engine as eng
+    import alvault.sync.engine as eng
     monkeypatch.setattr(eng, "STATE_FILE", tmp_path / "state.json")
 
     save_dir = tmp_path / "saves"
@@ -56,7 +56,7 @@ def test_push_directory(tmp_path, monkeypatch):
 
 
 def test_pull_skips_when_no_file_id(tmp_path, monkeypatch):
-    import windrose.sync.engine as eng
+    import alvault.sync.engine as eng
     monkeypatch.setattr(eng, "STATE_FILE", tmp_path / "state.json")
 
     cfg, world = _cfg_and_world(str(tmp_path / "save.sav"), "file", file_id=None)
@@ -67,7 +67,7 @@ def test_pull_skips_when_no_file_id(tmp_path, monkeypatch):
 
 
 def test_pull_single_file(tmp_path, monkeypatch):
-    import windrose.sync.engine as eng
+    import alvault.sync.engine as eng
     monkeypatch.setattr(eng, "STATE_FILE", tmp_path / "state.json")
 
     save = tmp_path / "save.sav"
@@ -79,7 +79,7 @@ def test_pull_single_file(tmp_path, monkeypatch):
 
 
 def test_push_caches_new_file_id(tmp_path, monkeypatch):
-    import windrose.sync.engine as eng
+    import alvault.sync.engine as eng
     monkeypatch.setattr(eng, "STATE_FILE", tmp_path / "state.json")
 
     save = tmp_path / "save.sav"
@@ -89,7 +89,7 @@ def test_push_caches_new_file_id(tmp_path, monkeypatch):
     client = MagicMock()
     client.upload_file.return_value = "brand_new_id"
 
-    with patch("windrose.config.manager.ConfigManager.save") as mock_save:
+    with patch("alvault.config.manager.ConfigManager.save") as mock_save:
         SyncEngine(cfg, world, client).push()
 
     assert world.drive_file_id == "brand_new_id"
@@ -98,7 +98,7 @@ def test_push_caches_new_file_id(tmp_path, monkeypatch):
 
 def test_state_written_per_world(tmp_path, monkeypatch):
     import json
-    import windrose.sync.engine as eng
+    import alvault.sync.engine as eng
     state_file = tmp_path / "state.json"
     monkeypatch.setattr(eng, "STATE_FILE", state_file)
 
