@@ -13,16 +13,7 @@ class DriveClient:
     def __init__(self, service) -> None:
         self._svc = service
 
-    def find_or_create_folder(self, name: str) -> str:
-        query = (
-            f"name='{name}' and mimeType='application/vnd.google-apps.folder'"
-            " and trashed=false"
-        )
-        results = self._svc.files().list(q=query, fields="files(id, name)").execute()
-        files = results.get("files", [])
-        if files:
-            return files[0]["id"]
-
+    def create_folder(self, name: str) -> str:
         metadata = {
             "name": name,
             "mimeType": "application/vnd.google-apps.folder",

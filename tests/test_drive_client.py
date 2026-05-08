@@ -10,23 +10,6 @@ def _make_client():
     return DriveClient(service), service
 
 
-def test_find_or_create_folder_existing():
-    client, svc = _make_client()
-    svc.files().list().execute.return_value = {"files": [{"id": "existing_id"}]}
-
-    result = client.find_or_create_folder("windrose-saves")
-    assert result == "existing_id"
-    svc.files().create.assert_not_called()
-
-
-def test_find_or_create_folder_new():
-    client, svc = _make_client()
-    svc.files().list().execute.return_value = {"files": []}
-    svc.files().create().execute.return_value = {"id": "new_id"}
-
-    result = client.find_or_create_folder("windrose-saves")
-    assert result == "new_id"
-
 
 def test_upload_file_new(tmp_path):
     client, svc = _make_client()

@@ -34,7 +34,7 @@ def init() -> None:
 
     typer.echo("Creating Drive folder...")
     client = DriveClient(build_service())
-    folder_id = client.find_or_create_folder(folder_name)
+    folder_id = client.create_folder(folder_name)
 
     cfg = WindroseConfig(
         game_name=game.name,
