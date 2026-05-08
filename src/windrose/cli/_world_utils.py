@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 
 import typer
@@ -65,11 +67,73 @@ def prompt_mod_config() -> tuple[str | None, str, str]:
     return str(mod_dir_path), mod_sync, "merge"
 
 
+def _discover_enshrouded_save_paths() -> list[Path]:
+    program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    results: list[Path] = []
+    seen: set[Path] = set()
+    for steam_root in [Path(program_files_x86) / "Steam", Path(program_files) / "Steam"]:
+        userdata = steam_root / "userdata"
+        if not userdata.is_dir():
+            continue
+        for user_dir in sorted(userdata.iterdir()):
+            if not user_dir.is_dir():
+                continue
+            remote = user_dir / "1203620" / "remote"
+            if not remote.is_dir():
+                continue
+            for f in sorted(remote.iterdir()):
+                if re.fullmatch(r"[0-9a-f]{8}", f.name) and f.is_file():
+                    if f not in seen:
+                        results.append(f)
+                        seen.add(f)
+                elif re.fullmatch(r"[0-9a-f]{8}_info", f.name) and f.is_file():
+                    base = f.with_name(f.name[: -len("_info")])
+                    if base not in seen:
+                        results.append(base)
+                        seen.add(base)
+    return results
+
+
+def _read_enshrouded_world_name(world_path: Path) -> str | None:
+    info_path = world_path.with_name(world_path.name + "_info")
+    if not info_path.is_file():
+        return None
+    try:
+        import zstandard as zstd  # type: ignore[import]
+        data = info_path.read_bytes()
+        offset = data.find(b"\x28\xb5\x2f\xfd")
+        if offset < 0:
+            return None
+        out = zstd.ZstdDecompressor().decompress(data[offset:], max_output_size=64 * 1024)
+        idx = out.find(b"\x04\x00name")
+        if idx < 0:
+            return None
+        val_len = int.from_bytes(out[idx + 6 : idx + 8], "little")
+        return out[idx + 8 : idx + 8 + val_len].decode("utf-8")
+    except Exception:
+        return None
+
+
+def _find_enshrouded_remote_dir() -> Path | None:
+    program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    for steam_root in [Path(program_files_x86) / "Steam", Path(program_files) / "Steam"]:
+        userdata = steam_root / "userdata"
+        if not userdata.is_dir():
+            continue
+        for user_dir in sorted(userdata.iterdir()):
+            if not user_dir.is_dir():
+                continue
+            remote = user_dir / "1203620" / "remote"
+            if remote.is_dir():
+                return remote
+    return None
+
+
 def _discover_save_paths(game_key: str = "windrose") -> list[Path]:
     if game_key == "enshrouded":
-        user_profile = os.environ.get("USERPROFILE", str(Path.home()))
-        p = Path(user_profile) / "Saved Games" / "Enshrouded"
-        return [p] if p.is_dir() else []
+        return _discover_enshrouded_save_paths()
     local_app_data = os.environ.get("LOCALAPPDATA")
     if not local_app_data:
         return []
@@ -91,22 +155,81 @@ def prompt_save_path(game_key: str = "windrose") -> tuple[str, str]:
     elif len(candidates) > 1:
         typer.echo("Found multiple save locations:")
         for i, p in enumerate(candidates, 1):
-            typer.echo(f"  [{i}] {p}")
+            try:
+                mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+                typer.echo(f"  [{i}] {p}  (modified {mtime})")
+            except OSError:
+                typer.echo(f"  [{i}] {p}")
         raw = typer.prompt("Enter a number to select, or type a custom path")
         if raw.isdigit() and 1 <= int(raw) <= len(candidates):
             save_path = str(candidates[int(raw) - 1])
         else:
             save_path = raw
     else:
-        save_path = typer.prompt("Full path to save file or save folder")
+        if game_key == "enshrouded":
+            remote_dir = _find_enshrouded_remote_dir()
+            if remote_dir:
+                typer.echo("No local Enshrouded worlds detected. Enter the world ID shared by the host.")
+                hex_id = typer.prompt("World ID (8-character hex, e.g. 3ad85aea)")
+                save_path = str(remote_dir / hex_id.strip().lower())
+            else:
+                save_path = typer.prompt("Full path to Enshrouded save file")
+        else:
+            save_path = typer.prompt("Full path to save file or save folder")
 
     save_p = Path(save_path)
     if save_p.is_dir():
         return save_path, "directory"
     if save_p.is_file():
         return save_path, "file"
+    if save_p.parent.is_dir():
+        return save_path, "file"
     typer.echo(f"Error: path does not exist: {save_path}", err=True)
     raise typer.Exit(1)
+
+
+def prompt_world_configs(game_key: str, supports_mods: bool) -> list[WorldConfig]:
+    """Prompt to configure one or more worlds, auto-detecting all save paths."""
+    candidates = _discover_save_paths(game_key)
+
+    if len(candidates) <= 1:
+        detected_name = (_read_enshrouded_world_name(candidates[0]) if candidates else None)
+        if detected_name:
+            typer.echo(f"  World: {detected_name}")
+            name = detected_name
+        else:
+            name = typer.prompt("Name for your first world", default="main")
+        save_path, save_type = prompt_save_path(game_key)
+        mod_dir, mod_sync, mod_pull = prompt_mod_config() if supports_mods else (None, "off", "merge")
+        return [WorldConfig(name=name, save_path=save_path, save_type=save_type,
+                            mod_dir=mod_dir, mod_sync=mod_sync, mod_pull_strategy=mod_pull)]
+
+    typer.echo(f"\nFound {len(candidates)} worlds:")
+    configs: list[WorldConfig] = []
+    for p in candidates:
+        try:
+            mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            label = f"(modified {mtime})"
+        except OSError:
+            label = "(not yet created)"
+        detected_name = _read_enshrouded_world_name(p)
+        if detected_name:
+            typer.echo(f"  {detected_name}  [{p.name}  {label}]")
+            name = detected_name
+        else:
+            name = typer.prompt(f"  Name for {p.name} {label}", default=p.name)
+            if not name.strip():
+                continue
+        save_type = "directory" if p.is_dir() else "file"
+        mod_dir, mod_sync, mod_pull = prompt_mod_config() if supports_mods else (None, "off", "merge")
+        configs.append(WorldConfig(name=name.strip(), save_path=str(p), save_type=save_type,
+                                   mod_dir=mod_dir, mod_sync=mod_sync, mod_pull_strategy=mod_pull))
+
+    if not configs:
+        typer.echo("No worlds configured.", err=True)
+        raise typer.Exit(1)
+
+    return configs
 
 
 def resolve_world(cfg: WindroseConfig, world_name: str | None) -> WorldConfig:

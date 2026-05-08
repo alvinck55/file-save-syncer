@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import typer
 
-from windrose.cli._world_utils import prompt_game_selection, prompt_save_path
-from windrose.config.manager import ConfigManager, WindroseConfig, WorldConfig
+from windrose.cli._world_utils import prompt_game_selection, prompt_world_configs
+from windrose.config.manager import ConfigManager, WindroseConfig
 from windrose.drive.auth import build_service, run_oauth_flow
 from windrose.drive.client import DriveClient
 
@@ -14,9 +14,7 @@ def join(folder_id: str = typer.Argument(..., help="Google Drive folder ID share
 
     game = prompt_game_selection()
 
-    world_name = typer.prompt("Name for your first world", default="main")
-
-    save_path, save_type = prompt_save_path(game_key=game.key)
+    worlds = prompt_world_configs(game_key=game.key, supports_mods=game.supports_mods)
 
     typer.echo("\nOpening browser for Google sign-in...")
     run_oauth_flow()
@@ -40,9 +38,9 @@ def join(folder_id: str = typer.Argument(..., help="Google Drive folder ID share
         supports_mods=game.supports_mods,
         drive_folder_id=folder_id,
         drive_folder_name=folder_name,
-        worlds=[WorldConfig(name=world_name, save_path=save_path, save_type=save_type)],
+        worlds=worlds,
     )
     ConfigManager().save(cfg)
 
-    typer.echo(f"\nJoined '{folder_name}'. Run `alvault launch` to start playing.")
+    typer.echo(f"\nJoined '{folder_name}'. Run `alvault launch --world <name>` to start playing.")
     typer.echo("Add more worlds with `alvault add-world <name> <path>`.")

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
-from windrose.cli._world_utils import prompt_game_selection, prompt_mod_config, prompt_save_path
-from windrose.config.manager import ConfigManager, WindroseConfig, WorldConfig
+from windrose.cli._world_utils import prompt_game_selection, prompt_world_configs
+from windrose.config.manager import ConfigManager, WindroseConfig
 from windrose.drive.auth import run_oauth_flow, build_service
 from windrose.drive.client import DriveClient
 
@@ -12,15 +14,17 @@ def init() -> None:
     """Interactive setup: configure game, save path, and sign in with Google."""
     typer.echo("alvault init\n")
 
+    if ConfigManager().exists():
+        typer.echo("Warning: alvault is already configured.")
+        typer.echo("Running init will create a new Drive folder and disconnect you from your current group.")
+        typer.echo("To take a turn hosting an existing world, just run `alvault launch` instead.")
+        if not typer.confirm("Continue and replace current config?", default=False):
+            raise typer.Exit(0)
+        typer.echo("")
+
     game = prompt_game_selection()
 
-    world_name = typer.prompt("Name for your first world", default="main")
-
-    save_path, save_type = prompt_save_path(game_key=game.key)
-    if game.supports_mods:
-        mod_dir, mod_sync, mod_pull_strategy = prompt_mod_config()
-    else:
-        mod_dir, mod_sync, mod_pull_strategy = None, "off", "merge"
+    worlds = prompt_world_configs(game_key=game.key, supports_mods=game.supports_mods)
 
     folder_name = typer.prompt("Google Drive folder name", default="alvault-saves")
 
@@ -39,18 +43,15 @@ def init() -> None:
         supports_mods=game.supports_mods,
         drive_folder_id=folder_id,
         drive_folder_name=folder_name,
-        worlds=[WorldConfig(
-            name=world_name,
-            save_path=save_path,
-            save_type=save_type,
-            mod_dir=mod_dir,
-            mod_sync=mod_sync,
-            mod_pull_strategy=mod_pull_strategy,
-        )],
+        worlds=worlds,
     )
     ConfigManager().save(cfg)
 
     typer.echo(f"\nConfig saved. Drive folder '{folder_name}' ready.")
     typer.echo(f"Share your folder ID with other players: {folder_id}")
+    if game.key == "enshrouded":
+        typer.echo("\nWorld IDs (share with players who haven't Steam-joined your worlds yet):")
+        for w in worlds:
+            typer.echo(f"  {w.name}: {Path(w.save_path).name}")
     typer.echo("Run `alvault launch` to start playing.")
     typer.echo("Add more worlds with `alvault add-world <name> <path>`.")

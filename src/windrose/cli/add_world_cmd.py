@@ -25,6 +25,8 @@ def add_world(
         save_type = "directory"
     elif save_p.is_file():
         save_type = "file"
+    elif save_p.parent.is_dir():
+        save_type = "file"
     else:
         typer.echo(f"Error: path does not exist: {path}", err=True)
         raise typer.Exit(1)
