@@ -69,6 +69,7 @@ class WorldConfig:
     mod_dir: str | None = field(default=None)
     mod_sync: str = field(default="off")           # "off" | "manifest_only" | "upload_download"
     mod_pull_strategy: str = field(default="merge") # "merge" | "replace"
+    drive_filename: str | None = field(default=None)
 
 
 @dataclass
@@ -112,6 +113,7 @@ class ConfigManager:
                     mod_dir=w.get("mod_dir"),
                     mod_sync=w.get("mod_sync", "off"),
                     mod_pull_strategy=w.get("mod_pull_strategy", "merge"),
+                    drive_filename=w.get("drive_filename"),
                 )
                 for w in data["worlds"]
             ]
@@ -146,6 +148,8 @@ class ConfigManager:
             }
             if w.drive_file_id is not None:
                 entry["drive_file_id"] = w.drive_file_id
+            if w.drive_filename is not None:
+                entry["drive_filename"] = w.drive_filename
             if w.mod_dir is not None:
                 entry["mod_dir"] = w.mod_dir
                 entry["mod_sync"] = w.mod_sync

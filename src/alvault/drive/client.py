@@ -71,7 +71,7 @@ class DriveClient:
     def get_folder_metadata(self, folder_id: str) -> dict:
         return (
             self._svc.files()
-            .get(fileId=folder_id, fields="id,name")
+            .get(fileId=folder_id, fields="id,name,owners")
             .execute()
         )
 

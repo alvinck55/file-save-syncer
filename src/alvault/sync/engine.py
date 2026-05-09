@@ -92,7 +92,8 @@ class SyncEngine:
                 raise WorldLockedError(locked_by, locked_at)
 
         if not self._world.drive_file_id:
-            drive_filename = save_path.name + ".zip" if self._world.save_type == "directory" else save_path.name
+            base_name = self._world.drive_filename if self._world.drive_filename else save_path.name
+            drive_filename = base_name + ".zip" if self._world.save_type == "directory" else base_name
             found_id = self._client.find_file_in_folder(drive_filename, self._cfg.drive_folder_id)
             if not found_id:
                 return

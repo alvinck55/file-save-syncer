@@ -14,8 +14,6 @@ def join(folder_id: str = typer.Argument(..., help="Google Drive folder ID share
 
     game = prompt_game_selection()
 
-    worlds = prompt_world_configs(game_key=game.key, supports_mods=game.supports_mods)
-
     typer.echo("\nOpening browser for Google sign-in...")
     run_oauth_flow()
     typer.echo("Authentication successful.")
@@ -30,6 +28,11 @@ def join(folder_id: str = typer.Argument(..., help="Google Drive folder ID share
         typer.echo(f"Error: could not access folder '{folder_id}': {e}", err=True)
         typer.echo("Make sure the host has shared the folder with your Google account, or that the folder ID is correct.")
         raise typer.Exit(1)
+
+    owners = meta.get("owners", [])
+    host_email = owners[0].get("emailAddress", "") if owners else ""
+
+    worlds = prompt_world_configs(game_key=game.key, supports_mods=game.supports_mods, host_email=host_email or None)
 
     cfg = AlvaultConfig(
         game_name=game.name,

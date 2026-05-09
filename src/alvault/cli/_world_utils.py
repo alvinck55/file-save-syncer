@@ -131,6 +131,13 @@ def _find_enshrouded_remote_dir() -> Path | None:
     return None
 
 
+def _find_free_enshrouded_slot(remote_dir: Path) -> Path:
+    while True:
+        candidate = remote_dir / os.urandom(4).hex()
+        if not candidate.exists() and not candidate.with_name(candidate.name + "_info").exists():
+            return candidate
+
+
 def _discover_save_paths(game_key: str = "windrose") -> list[Path]:
     if game_key == "enshrouded":
         return _discover_enshrouded_save_paths()
@@ -143,15 +150,20 @@ def _discover_save_paths(game_key: str = "windrose") -> list[Path]:
     return sorted(base.glob("*/RocksDB/*/Worlds"))
 
 
-def prompt_save_path(game_key: str = "windrose") -> tuple[str, str]:
+def prompt_save_path(game_key: str = "windrose") -> tuple[str, str, str | None]:
     """Prompt for the save path, auto-detecting common locations as defaults.
 
-    Returns (save_path, save_type) where save_type is 'file' or 'directory'.
+    Returns (save_path, save_type, drive_filename) where drive_filename is set
+    only when the local slot was remapped away from the host's hex ID.
     """
     candidates = _discover_save_paths(game_key)
 
     if len(candidates) == 1:
         save_path = typer.prompt("Full path to save file or save folder", default=str(candidates[0]))
+        save_p = Path(save_path)
+        if save_p.is_dir():
+            return save_path, "directory", None
+        return save_path, "file", None
     elif len(candidates) > 1:
         typer.echo("Found multiple save locations:")
         for i, p in enumerate(candidates, 1):
@@ -165,13 +177,22 @@ def prompt_save_path(game_key: str = "windrose") -> tuple[str, str]:
             save_path = str(candidates[int(raw) - 1])
         else:
             save_path = raw
+        save_p = Path(save_path)
+        if save_p.is_dir():
+            return save_path, "directory", None
+        return save_path, "file", None
     else:
         if game_key == "enshrouded":
             remote_dir = _find_enshrouded_remote_dir()
             if remote_dir:
                 typer.echo("No local Enshrouded worlds detected. Enter the world ID shared by the host.")
-                hex_id = typer.prompt("World ID (8-character hex, e.g. 3ad85aea)")
-                save_path = str(remote_dir / hex_id.strip().lower())
+                hex_id = typer.prompt("World ID (8-character hex, e.g. 3ad85aea)").strip().lower()
+                candidate = remote_dir / hex_id
+                if candidate.exists() or candidate.with_name(hex_id + "_info").exists():
+                    free = _find_free_enshrouded_slot(remote_dir)
+                    typer.echo(f"Slot {hex_id} is already in use locally. Assigning free slot {free.name}.")
+                    return str(free), "file", hex_id
+                return str(candidate), "file", None
             else:
                 save_path = typer.prompt("Full path to Enshrouded save file")
         else:
@@ -179,16 +200,16 @@ def prompt_save_path(game_key: str = "windrose") -> tuple[str, str]:
 
     save_p = Path(save_path)
     if save_p.is_dir():
-        return save_path, "directory"
+        return save_path, "directory", None
     if save_p.is_file():
-        return save_path, "file"
+        return save_path, "file", None
     if save_p.parent.is_dir():
-        return save_path, "file"
+        return save_path, "file", None
     typer.echo(f"Error: path does not exist: {save_path}", err=True)
     raise typer.Exit(1)
 
 
-def prompt_world_configs(game_key: str, supports_mods: bool) -> list[WorldConfig]:
+def prompt_world_configs(game_key: str, supports_mods: bool, host_email: str | None = None) -> list[WorldConfig]:
     """Prompt to configure one or more worlds, auto-detecting all save paths."""
     candidates = _discover_save_paths(game_key)
 
@@ -199,9 +220,11 @@ def prompt_world_configs(game_key: str, supports_mods: bool) -> list[WorldConfig
             name = detected_name
         else:
             name = typer.prompt("Name for your first world", default="main")
-        save_path, save_type = prompt_save_path(game_key)
+        save_path, save_type, drive_filename = prompt_save_path(game_key)
+        name = f"{name} ({host_email})" if host_email else name
         mod_dir, mod_sync, mod_pull = prompt_mod_config() if supports_mods else (None, "off", "merge")
         return [WorldConfig(name=name, save_path=save_path, save_type=save_type,
+                            drive_filename=drive_filename,
                             mod_dir=mod_dir, mod_sync=mod_sync, mod_pull_strategy=mod_pull)]
 
     typer.echo(f"\nFound {len(candidates)} worlds:")
@@ -221,8 +244,10 @@ def prompt_world_configs(game_key: str, supports_mods: bool) -> list[WorldConfig
             if not name.strip():
                 continue
         save_type = "directory" if p.is_dir() else "file"
+        final_name = f"{name.strip()} ({host_email})" if host_email else name.strip()
         mod_dir, mod_sync, mod_pull = prompt_mod_config() if supports_mods else (None, "off", "merge")
-        configs.append(WorldConfig(name=name.strip(), save_path=str(p), save_type=save_type,
+        configs.append(WorldConfig(name=final_name, save_path=str(p), save_type=save_type,
+                                   drive_filename=None,
                                    mod_dir=mod_dir, mod_sync=mod_sync, mod_pull_strategy=mod_pull))
 
     if not configs:
